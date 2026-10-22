@@ -8,11 +8,10 @@
     "lib": ["ESNext"],
     "types": ["@cloudflare/vitest-pool-workers", "@cloudflare/workers-types"],
     "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx"
+    "jsxImportSource": "hono/jsx",
+    "paths": {
+      "~/*": ["./src/*"]
+    }
   },
-  "include": [
-    "./**/*.ts",
-    "./**/*.tsx",
-    "./worker-configuration.d.ts" // output of `wrangler types`
-  ]
+  "include": ["./**/*.ts", "./**/*.tsx", "./worker-configuration.d.ts"]
 }

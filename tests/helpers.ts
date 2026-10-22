@@ -1,16 +1,15 @@
-import { env } from "cloudflare:test";
+import { env } from 'cloudflare:test'
 
-const PROJECT_ID = env.NEON_PROJECT_ID;
-if (!PROJECT_ID) {
-  throw new Error("Missing Environment Variable: NEON_PROJECT_ID");
+const getCredentials = () => {
+  const projectId = env.NEON_PROJECT_ID
+  const bearerToken = env.NEON_API_TOKEN
+  if (!projectId || !bearerToken) return null
+  return {
+    projectId,
+    bearerToken,
+    baseUrl: `https://console.neon.tech/api/v2/projects/${projectId}`
+  }
 }
-
-const BEARER_TOKEN = env.NEON_API_TOKEN;
-if (!BEARER_TOKEN) {
-  throw new Error("Missing Environment Variable: NEON_API_TOKEN");
-}
-
-const BASE_URL = `https://console.neon.tech/api/v2/projects/${PROJECT_ID}`;
 
 /**
  * Branch the target database, copying the schema and all current data.
@@ -18,90 +17,106 @@ const BASE_URL = `https://console.neon.tech/api/v2/projects/${PROJECT_ID}`;
  * @see https://api-docs.neon.tech/reference/createprojectbranch
  */
 const createBranch = async (branchName: string) => {
-  const response = await fetch(`${BASE_URL}/branches`, {
-    method: "POST",
+  const creds = getCredentials()
+  if (!creds) return null
+
+  const response = await fetch(`${creds.baseUrl}/branches`, {
+    method: 'POST',
     headers: {
-      "Authorization": `Bearer ${BEARER_TOKEN}`,
-      "Content-Type": "application/json",
+      Authorization: `Bearer ${creds.bearerToken}`,
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       branch: {
-        name: branchName,
+        name: branchName
       },
       endpoints: [
         {
-          type: "read_write",
-        },
-      ],
-    }),
-  });
+          type: 'read_write'
+        }
+      ]
+    })
+  })
 
   if (!response.ok) {
     throw new Error(`Failed to create test branch ${branchName}`, {
-      cause: await response.json(),
-    });
+      cause: await response.json()
+    })
   }
 
   const { branch } = await response.json<{
-    branch: { id: string };
-  }>();
+    branch: { id: string }
+  }>()
 
-  return branch;
-};
+  return branch
+}
 
 /**
  * Get branch connection URI by branch ID.
  * @see https://api-docs.neon.tech/reference/getconnectionuri
  */
 const getConnectionUri = async (branchId: string) => {
+  const creds = getCredentials()
+  if (!creds) return ''
+
   const response = await fetch(
-    `${BASE_URL}/connection_uri?branch_id=${branchId}&database_name=neondb&role_name=neondb_owner`,
+    `${creds.baseUrl}/connection_uri?branch_id=${branchId}&database_name=neondb&role_name=neondb_owner`,
     {
       headers: {
-        "Authorization": `Bearer ${BEARER_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-    },
-  );
+        Authorization: `Bearer ${creds.bearerToken}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  )
 
   if (!response.ok) {
-    throw new Error("Failed to get connection URI", {
-      cause: await response.json(),
-    });
+    throw new Error('Failed to get connection URI', {
+      cause: await response.json()
+    })
   }
 
-  const { uri } = await response.json<{ uri: string }>();
-  return uri;
-};
+  const { uri } = await response.json<{ uri: string }>()
+  return uri
+}
 
 /**
  * Create a test branch based on the database associated with `NEON_PROJECT_ID` in `.dev.vars`.
  * @returns New branch connection URI, and branch ID for post-test cleanup.
- * @throws Error with response data in `cause` if either branch creation or
- * connection URI request fails.
  */
 export const createTestBranch = async () => {
-  const { id } = await createBranch(`test-${crypto.randomUUID()}`);
-  const uri = await getConnectionUri(id);
+  const creds = getCredentials()
+  if (!creds) {
+    return { id: '', uri: env.DATABASE_URL || '' }
+  }
 
-  return { id, uri };
-};
+  const branch = await createBranch(`test-${crypto.randomUUID()}`)
+  if (!branch) {
+    return { id: '', uri: env.DATABASE_URL || '' }
+  }
+
+  const uri = await getConnectionUri(branch.id)
+  return { id: branch.id, uri }
+}
 
 /**
  * Delete branch by ID.
  * @see https://api-docs.neon.tech/reference/deleteprojectbranch
  */
 export const deleteBranch = async (branchId: string) => {
-  const response = await fetch(`${BASE_URL}/branches/${branchId}`, {
-    method: "DELETE",
+  if (!branchId) return
+  const creds = getCredentials()
+  if (!creds) return
+
+  const response = await fetch(`${creds.baseUrl}/branches/${branchId}`, {
+    method: 'DELETE',
     headers: {
-      "Authorization": `Bearer ${BEARER_TOKEN}`,
-    },
-  });
+      Authorization: `Bearer ${creds.bearerToken}`
+    }
+  })
 
   if (!response.ok) {
     throw new Error(`Failed to delete branch ${branchId}`, {
-      cause: response,
-    });
+      cause: response
+    })
   }
-};
+}
