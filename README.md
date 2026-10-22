@@ -59,6 +59,7 @@ This template uses the [`hono-openapi` middleware](github.com/rhinobase/hono-ope
 ### Developing
 
 When you iterate on the database schema, you'll need to generate a new migration and apply it:
+
 ```sh
 npm run db:generate
 npm run db:migrate
@@ -108,16 +109,19 @@ npx wrangler secret put <KEY>
 ```
 
 If you haven’t generated the latest migration files yet, run:
+
 ```shell
 npm run db:generate
 ```
 
 Afterwards, run the migration script for production:
+
 ```shell
 npm run db:migrate:prod
 ```
 
 You can also run the seed script for production:
+
 ```shell
 npm run db:seed:prod
 ```
