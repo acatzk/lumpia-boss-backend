@@ -1,26 +1,45 @@
 import { afterAll, vi } from 'vitest'
-import { neon } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
 import { createMiddleware } from 'hono/factory'
+import { neon } from '@neondatabase/serverless'
 
-import * as schema from '../src/db/schema'
+import type { Db } from '~/db/client'
+import * as schema from '~/db/schema'
+
 import { createTestBranch, deleteBranch } from './helpers'
 
 const branch = await createTestBranch()
 
-const FALLBACK_TEST_DB_URL =
-  'postgresql://neondb_owner:npg_mO4G6TMiuUYl@ep-sweet-term-aoptnwiz.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require'
+const createOfflineDbProxy = (): Db => {
+  return new Proxy(
+    {},
+    {
+      get: (_target: object, prop: string | symbol) => {
+        if (prop === 'then') return undefined
+        return () => {
+          throw new Error(
+            'Database operations require DATABASE_URL to be set in environment variables or GitHub Secrets.'
+          )
+        }
+      }
+    }
+  ) as unknown as Db
+}
 
 vi.mock('../src/middlewares/dbProvider.ts', () => {
   return {
     dbProvider: createMiddleware(async (c, next) => {
-      const uri = branch?.uri || c.env?.DATABASE_URL || FALLBACK_TEST_DB_URL
-      const db = drizzle(neon(uri), {
-        schema,
-        casing: 'snake_case'
-      })
+      const uri = branch?.uri || c.env?.DATABASE_URL || process.env.DATABASE_URL
+      if (uri) {
+        const db = drizzle(neon(uri), {
+          schema,
+          casing: 'snake_case'
+        })
+        c.set('db', db)
+      } else {
+        c.set('db', createOfflineDbProxy())
+      }
 
-      c.set('db', db)
       await next()
     })
   }
