@@ -1,8 +1,9 @@
-import { neon } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
 import { createMiddleware } from 'hono/factory'
 import { afterAll, beforeAll, vi } from 'vitest'
+import { neon } from '@neondatabase/serverless'
 
+import * as schema from '../src/db/schema'
 import { createTestBranch, deleteBranch } from './helpers'
 
 const branch = await createTestBranch()
@@ -13,6 +14,7 @@ beforeAll(async () => {
       return {
         dbProvider: createMiddleware(async (c, next) => {
           const db = drizzle(neon(branch.uri), {
+            schema,
             casing: 'snake_case'
           })
 

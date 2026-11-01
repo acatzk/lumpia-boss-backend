@@ -32,4 +32,57 @@ describe('Root & System Endpoints', () => {
     expect(data).toContain('User-agent: *')
     expect(data).toContain('Disallow: /')
   })
+
+  it('Blocks /api-docs without basic auth credentials with 401', async () => {
+    const res = await app.request('/api-docs', { method: 'GET' }, env)
+    expect(res.status).toBe(401)
+  })
+
+  it('Allows /api-docs portal access with valid basic auth credentials', async () => {
+    const username = env.SWAGGER_USERNAME || 'admin'
+    const password = env.SWAGGER_PASSWORD || 'admin'
+    const credentials = btoa(`${username}:${password}`)
+
+    const res = await app.request(
+      '/api-docs',
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Basic ${credentials}`
+        }
+      },
+      env
+    )
+
+    expect(res.status).toBe(200)
+    const html = await res.text()
+    expect(html).toContain('Lumpia Boss Studio API')
+    expect(html).toContain('Swagger UI Explorer')
+  })
+
+  it('Blocks Swagger UI without basic auth credentials with 401', async () => {
+    const res = await app.request('/api-docs/swagger', { method: 'GET' }, env)
+    expect(res.status).toBe(401)
+  })
+
+  it('Allows Swagger UI access with valid basic auth credentials', async () => {
+    const username = env.SWAGGER_USERNAME || 'admin'
+    const password = env.SWAGGER_PASSWORD || 'admin'
+    const credentials = btoa(`${username}:${password}`)
+
+    const res = await app.request(
+      '/api-docs/swagger',
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Basic ${credentials}`
+        }
+      },
+      env
+    )
+
+    expect(res.status).toBe(200)
+    const html = await res.text()
+    expect(html).toContain('swagger-ui')
+  })
 })

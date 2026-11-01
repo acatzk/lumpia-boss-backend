@@ -5,7 +5,7 @@ import type { z } from 'zod'
 
 /**
  * A wrapper around the `hono-openapi` Zod validator
- * that standardizes error handling.
+ * that standardizes error handling with structured JSON responses.
  * @param target The relevant Hono validation target, e.g., "json" or "query"
  * @param schema A Zod schema used to validate the selected target
  */
@@ -13,12 +13,17 @@ export const zodValidator = <Target extends keyof ValidationTargets, Schema exte
   target: Target,
   schema: Schema
 ) => {
-  return validator(target, schema, (result) => {
+  return validator(target, schema, (result, c) => {
     if (!result.success) {
-      throw new HTTPException(400, {
-        message: 'Invalid Request',
-        cause: result.error
-      })
+      const errorResponse = c.json(
+        {
+          error: 'Invalid Request',
+          code: 'VALIDATION_ERROR',
+          details: result.error.flatten()
+        },
+        400
+      )
+      throw new HTTPException(400, { res: errorResponse })
     }
   })
 }
