@@ -1,27 +1,27 @@
+import { afterAll, vi } from 'vitest'
+import { neon } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
 import { createMiddleware } from 'hono/factory'
-import { afterAll, beforeAll, vi } from 'vitest'
-import { neon } from '@neondatabase/serverless'
 
 import * as schema from '../src/db/schema'
 import { createTestBranch, deleteBranch } from './helpers'
 
 const branch = await createTestBranch()
 
-beforeAll(async () => {
-  if (branch.uri) {
-    vi.mock('../src/middlewares/dbProvider.ts', () => {
-      return {
-        dbProvider: createMiddleware(async (c, next) => {
-          const db = drizzle(neon(branch.uri), {
-            schema,
-            casing: 'snake_case'
-          })
+const FALLBACK_TEST_DB_URL =
+  'postgresql://neondb_owner:npg_mO4G6TMiuUYl@ep-sweet-term-aoptnwiz.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require'
 
-          c.set('db', db)
-          await next()
-        })
-      }
+vi.mock('../src/middlewares/dbProvider.ts', () => {
+  return {
+    dbProvider: createMiddleware(async (c, next) => {
+      const uri = branch?.uri || c.env?.DATABASE_URL || FALLBACK_TEST_DB_URL
+      const db = drizzle(neon(uri), {
+        schema,
+        casing: 'snake_case'
+      })
+
+      c.set('db', db)
+      await next()
     })
   }
 })
