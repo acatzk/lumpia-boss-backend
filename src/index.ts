@@ -6,6 +6,7 @@ import { corsConfig } from '~/config/cors'
 import { dbProvider } from '~/middlewares/dbProvider'
 import { errorHandler } from '~/middlewares/errorHandler'
 import apiRoutes from '~/routes'
+import docsRoutes from '~/routes/docsRoutes'
 import systemRoutes from '~/routes/systemRoutes'
 import type { AppContext, AppVariables, Bindings } from '~/types'
 
@@ -14,7 +15,8 @@ const app = new Hono<{ Bindings: Bindings; Variables: AppVariables }>()
   .use('*', dbProvider)
   .get('/', (c) => c.text('Honc from above! ☁️🪿'))
   .route('/', systemRoutes)
-  .route('/api', apiRoutes)
+  .route('/', docsRoutes)
+  .route('/api/v1', apiRoutes)
 
 // Global error handler
 app.onError(errorHandler)

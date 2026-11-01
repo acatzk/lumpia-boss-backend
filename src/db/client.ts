@@ -1,11 +1,13 @@
 import { neon, neonConfig } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
 
+import * as schema from '~/db/schema'
+
 type EnvWithDb = {
   DATABASE_URL?: string
 }
 
-export type Db = ReturnType<typeof drizzle>
+export type Db = ReturnType<typeof drizzle<typeof schema>>
 
 const dbCache = new Map<string, Db>()
 
@@ -59,7 +61,7 @@ export const createDb = (target: string | EnvWithDb): Db => {
   let db = dbCache.get(databaseUrl)
   if (!db) {
     const sql = neon(databaseUrl)
-    db = drizzle(sql, { casing: 'snake_case' })
+    db = drizzle(sql, { schema, casing: 'snake_case' })
     dbCache.set(databaseUrl, db)
   }
   return db

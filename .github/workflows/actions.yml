@@ -30,5 +30,25 @@ jobs:
           bun run format:check
           bun x tsc --noEmit
 
+      - name: Configure Test Environment
+        run: |
+          cat << 'EOF' > .dev.vars
+          DATABASE_URL="${{ secrets.NEON_DATABASE_URL_DEV || secrets.NEON_DATABASE_URL }}"
+          JWT_SECRET="${{ secrets.JWT_SECRET || 'test-jwt-access-secret-minimum-32-chars-key!' }}"
+          JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET || 'test-jwt-refresh-secret-minimum-32-chars-key!' }}"
+          ENVIRONMENT="development"
+          RECAPTCHA_BYPASS_DEV="true"
+          SWAGGER_USERNAME="admin"
+          SWAGGER_PASSWORD="admin"
+          EOF
+
       - name: Run Unit & Integration Tests
         run: bun run test --run
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL_DEV || secrets.NEON_DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-jwt-access-secret-minimum-32-chars-key!' }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET || 'test-jwt-refresh-secret-minimum-32-chars-key!' }}
+          ENVIRONMENT: development
+          RECAPTCHA_BYPASS_DEV: 'true'
+          SWAGGER_USERNAME: admin
+          SWAGGER_PASSWORD: admin
